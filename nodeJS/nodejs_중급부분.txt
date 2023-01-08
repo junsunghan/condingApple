@@ -1,0 +1,17 @@
+중급
+
+mongo db 설치
+1. npm install mongodb 터미널 실행
+
+Failed to lookup view "list.ejs" in views directory
+
+EJS 사용
+1. npm install ejs 터미널 실행
+2. server.js에 app.set('view engine', 'ejs'); 를 작성해 ejs 사용할 수 있도록 설정
+3. html 파일을 ejs 확장자로 변경
+4. 중요!!!! ejs파일은 views 폴더 안에 작성되어야함!!
+Failed to lookup view "list.ejs" in views directory 안하면 이러한 에러가 뜸!!!
+
+*** operator
+$set : 값을 바꾸기
+$inc : 기존값에 더해주기
