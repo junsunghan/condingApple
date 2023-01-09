@@ -1,6 +1,9 @@
 const express = require('express'); //설치한 라이브러리 첨부
 const app = express(); // 객체 생성
 
+//.env 환경변수 사용
+require('dotenv').config()
+
 //listen(서버띄울 포트번호, 띄운 후 실행할 코드)
 
 //ejs 사용하기위한 코드
@@ -21,7 +24,7 @@ var db;
 const MongoClient = require('mongodb').MongoClient;
 
 
-MongoClient.connect('mongodb+srv://admin:qwer1234@cluster0.xh00fgp.mongodb.net/?retryWrites=true&w=majority',function(에러,client){
+MongoClient.connect(process.env.DB_URL,function(에러,client){
 
     //연결되면 할일
     if(에러){
@@ -84,10 +87,7 @@ app.post('/add',function(요청,응답){
             },function(에러,결과){
                 if(에러) return console.log(에러)
             })
-
         });
-
-
     });
     
     응답.send('전송완료');
@@ -161,6 +161,21 @@ app.post('/login', passport.authenticate('local', {failureRedirect : '/fail'}), 
     응답.redirect('/')
   });
 
+app.get('/mypage', 로그인했니, function(요청,응답){
+    console.log(요청.user);
+    응답.render('mypage.ejs', {사용자 : 요청.user});
+});
+
+function 로그인했니(요청,응답, next){
+    if(요청.user){
+        next()
+    }else{
+        응답.send('로그인 안하셨습니다.')
+    }
+}
+
+
+
 passport.use(new LocalStrategy({
     usernameField: 'id',    // form의 name 속성
     passwordField: 'pw',
@@ -187,5 +202,9 @@ passport.serializeUser(function(user, done){
 });
 
 passport.deserializeUser(function(아이디, done){
-    done(null, {});
+    //디비에서 위에있는 user.id로 유저를 찾은 뒤에 유저 정보를
+    //하단 줄괄호 안에 넣을 수 있음 -> 중괄호 안의 데이터를 리턴 가능함
+    db.collection('login').findOne({id: 아이디}, function(에러, 결과){
+        done(null, 결과);
+    })
 });

@@ -1,0 +1,61 @@
+
+part3
+
+PUT을 사용하기 위해서 method-override 설치
+1.  npm install method-override
+2.  server.js 상단에 
+const methodOverride = require('method-override')
+app.use(methodOverride('_method'))
+추가
+3. <form action="/add?_method=PUT" method="post">
+add 뒤에 ?_method=PUT 처럼 뒤에 붙여야함!
+
+회원가입을 위한 라이브러리 설치
+1. npm install passport passport-local express-session  (총 3개)
+2. 
+app.use(session({secret : '비밀코드', resave : true, saveUninitialized: false}));
+app.use(passport.initialize());
+app.use(passport.session());
+
+3. 
+passport.use(new LocalStrategy({
+    usernameField: 'id',    // form의 name 속성
+    passwordField: 'pw',
+    session: true,
+    passReqToCallback: false,
+  }, function (입력한아이디, 입력한비번, done) {
+    //console.log(입력한아이디, 입력한비번);
+    db.collection('login').findOne({ id: 입력한아이디 }, function (에러, 결과) {
+        //done => done(서버에러, 성공시 사용자 DB데이터, 에러메세지)
+      if (에러) return done(에러)
+  
+      if (!결과) return done(null, false, { message: '존재하지않는 아이디요' })
+      if (입력한비번 == 결과.pw) {
+        return done(null, 결과)
+      } else {
+        return done(null, false, { message: '비번틀렸어요' })
+      }
+    })
+  }));
+
+  //session 등록
+passport.serializeUser(function(user, done){
+    done(null, user.id);
+});
+
+passport.deserializeUser(function(아이디, done){
+    //디비에서 위에있는 user.id로 유저를 찾은 뒤에 유저 정보를
+    //하단 줄괄호 안에 넣을 수 있음 -> 중괄호 안의 데이터를 리턴 가능함
+    db.collection('login').findOne({id: 아이디}, function(에러, 결과){
+        done(null, 결과);
+    })
+});
+
+.env 파일에 민감한 환경변수들 관리하기
+1. npm install dotenv 라이브러리 설치
+2. server.js 에 require('dotenv').config() 생성
+3. 상단에 .env 파일 생성
+4. 민감한 값들 따로 저장
+ex) PORT=8080
+DB_URL='mongodb+srv://admin:qwer1234@cluster0.xh00fgp.mongodb.net/?retryWrites=true&w=majority'
+5. 값을 사용하는 방법 : process.env.{여기에 사용할 값의 변수 넣기 ex) DB_URL}
