@@ -208,3 +208,14 @@ passport.deserializeUser(function(아이디, done){
         done(null, 결과);
     })
 });
+
+//검색기능
+
+app.get('/search', function(요청,응답){
+    console.log(요청.query.value);
+    db.collection('post').find( {$text: { $search : 요청.query.value}}).toArray(function(에러,결과){
+        console.log(결과);
+        응답.render('search.ejs', {posts : 결과});
+    });
+});
+
