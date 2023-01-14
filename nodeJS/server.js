@@ -1,5 +1,11 @@
 const express = require('express'); //설치한 라이브러리 첨부
 const app = express(); // 객체 생성
+const { ObjectId } = require('mongodb'); // ObjectId() 안에 담고 싶으면 사용
+
+//socket.io 셋팅
+const http = require('http').createServer(app);
+const { Server } = require('socket.io');
+const io = new Server(http);
 
 //.env 환경변수 사용
 require('dotenv').config()
@@ -37,13 +43,15 @@ MongoClient.connect(process.env.DB_URL, function (에러, client) {
     //     console.log('저장완료');
     // });
 
-    app.listen(8080, function () {
+    http.listen(8080, function () {
         console.log('listening 8080');
     });
 })
 
 // 여기서 났던 에러!!!
 // app.listen을 두번 쓰면 에러난다 ㅠㅠ
+// socket을 이용할 때는 app -> http.listen으로 사용!
+
 
 //POST 요청으로 서버에 전송하기 위해서 body-parser 사용
 app.use(express.urlencoded({ extended: true }));
@@ -122,7 +130,6 @@ app.get('/login', function (요청, 응답) {
 })
 
 app.post('/login', passport.authenticate('local', { failureRedirect: '/fail' }), function (요청, 응답) {
-    console.log('여기옴?');
     응답.redirect('/')
 });
 
@@ -271,26 +278,26 @@ app.get('/search', (요청, 응답) => {
 app.use('/shop', require('./routes/shop.js'));
 app.use('/board/sub', require('./routes/board.js'));
 
-app.get('/upload', function(요청, 응답){
+app.get('/upload', function (요청, 응답) {
     응답.render('upload.ejs');
 })
 
 //multer 라이브러리 사용법
 let multer = require('multer');
 var storage = multer.diskStorage({
-    destination : function(req, file, cb){
+    destination: function (req, file, cb) {
         cb(null, './public/image');
     },
-    filename : function(req, file, cb){
+    filename: function (req, file, cb) {
         cb(null, file.originalname);
         // cb(null, file.originalname + new Date());  이렇게하면 피일이름에 날짜 추가됨
     }
 });
 
-var upload = multer({ storage: storage});
+var upload = multer({ storage: storage });
 
 //파일 한개
-app.post('/upload', upload.single('profile'), function(요청, 응답){
+app.post('/upload', upload.single('profile'), function (요청, 응답) {
     응답.send('업로드 완료');
 });
 
@@ -302,10 +309,114 @@ app.post('/upload', upload.single('profile'), function(요청, 응답){
 
 
 //이미지 업로드 보여주기
-app.get('/image/:imageName', function(요청,응답){
-    응답.sendFile( __dirname + '/public/image/' + 요청.params.imageName);
+app.get('/image/:imageName', function (요청, 응답) {
+    응답.sendFile(__dirname + '/public/image/' + 요청.params.imageName);
 })
 
-app.get('/chat', function(요청, 응답){
-    응답.render('chat.ejs');
+app.post('/chatroom', 로그인했니, function (요청, 응답) {
+    var 저장할거 = {
+        title: '테스트채팅방',
+        member: [ObjectId(요청.body.당한사람id), 요청.user._id],
+        date: new Date()
+    }
+    db.collection('chatroom').insertOne(저장할거).then((결과) => {
+        응답.send('성공');
+    })
+})
+
+app.get('/chat', 로그인했니, function (요청, 응답) {
+
+    db.collection('chatroom').find({ member: 요청.user._id }).toArray().then((결과) => {
+        응답.render('chat.ejs', { data: 결과 });
+    })
+
+})
+
+app.post('/message', 로그인했니, function (요청, 응답) {
+
+    var 저장할거 = {
+        parent: 요청.body.parent,
+        content: 요청.body.content,
+        userid: 요청.user._id,
+        date: new Date()
+    }
+
+    db.collection('message').insertOne(저장할거).then(() => {
+        console.log('DB저장완료');
+        응답.send('저장성공');
+    })
+})
+
+//서버와 유저간 실시간 소통을 위한 api
+app.get('/message/:id', 로그인했니, function (요청, 응답) {
+
+    응답.writeHead(200, {
+        "Connection": "keep-alive",
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+    });
+
+    db.collection('message').find({ parent: 요청.params.id }).toArray().then((결과) => {
+        //유저에게 데이터 전송은 
+        //event: 보낼데이터이름\n
+        //data : 보낼데이터 \n\n
+        응답.write('event: test\n');
+        응답.write('data: ' + JSON.stringify(결과) + '\n\n');
+    })
+
+    //Change Stream - MongoDB 기능
+    //DB 변동시 -> 서버에 알려주고 -> 유저에게 보내줌
+
+    const 찾을문서 = [
+        { $match: { 'fullDocument.parent': 요청.params.id } }
+    ];
+    //컬렉션 선택함
+    const changeStream = db.collection('message').watch(찾을문서); //watch() 붙이면 실시간 감시해줌
+
+    //해당 컬렉션에 변동이 생기면 여기 코드가 실행됨
+    changeStream.on('change', (result) => {
+        console.log(result.fullDocument);
+        var 추가된문서 = [result.fullDocument];
+        응답.write('event: test\n');
+        응답.write('data: ' + JSON.stringify(추가된문서) + '\n\n');
+    });
+
+})
+
+
+//socket을 이용한 단체 채팅방만들기
+
+app.get('/socket', function (요청, 응답) {
+    응답.render('socket.ejs');
+})
+
+io.on('connection', function (socket) {
+    console.log('유저 접속됨');
+
+
+    //서버 수신코드
+    //socket.on(작명, 콜백함수)
+    //누가 user-send 이름으로 메세지 보내면 내부코드 실행
+    socket.on('user-send', function (data) {
+        console.log(data);
+        //data = 담긴 데이터
+        io.emit('broadcast', data);
+
+        //서버 - 유저1명간 단독으로 소통하고 싶을때
+        /*
+            to를 사용하여 socket의 아이디값으로 지정
+            io.to(socket.id).emit('broadcast', data);
+        */
+    });
+
+    //채팅방 만들기
+    socket.on('joinroom', function (data) {
+        socket.join("room1");
+    });
+
+    //room에 들어간 사람들만 채팅
+    socket.on('room1-send',function(data){
+        io.to("room1").emit('broadcast', data);
+    });
+
 })

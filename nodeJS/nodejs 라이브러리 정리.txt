@@ -1,0 +1,11 @@
+nodeJS 필수 설치 파일들
+
+1. npm install express		웹 애플리케이션 프레임워크
+2. npm install -g nodemon		서버 자동실행
+3. npm install mongodb		mongodb사용
+4. npm install ejs			템플릿 엔진 모듈
+5. npm install method-override 	put/delete 사용하기 위한 라이브러리
+6. npm install passport passport-local express-session	회원가입을 위한 라이브러리
+7. npm install dotenv		.env 파일을 위한 라이브러리
+8. npm install multer		파일 업로드 라이브러리
+9. npm install socket.io		채팅을 위한 socket.io 라이브러리

@@ -66,3 +66,7 @@ indexing 사용하기
 
 파일 올리기 쉽게 하는 라이브러리
 npm install multer 
+
+
+웹소켓 기능만들기
+npm install socket.io 		라이브러리 설치
